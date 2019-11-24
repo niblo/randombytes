@@ -29,12 +29,12 @@ static void padto(const char c, const size_t curlen, const size_t len) {
 
 // ======== Forward declarations needed for mocked functions ========
 
-#if defined(__linux__) && defined(SYS_getrandom)
+#if defined(__linux__) && defined(SYS_getrandom) && !defined(RANDOMBYTES_USE_DEVRANDOM)
 int __wrap_syscall(int n, char *buf, size_t buflen, int flags);
 int __real_syscall(int n, char *buf, size_t buflen, int flags);
 #endif /* defined(__linux__) && defined(SYS_getrandom) */
 
-#if defined(__linux__) && !defined(SYS_getrandom)
+#if defined(__linux__) && ( !defined(SYS_getrandom) || defined(RANDOMBYTES_USE_DEVRANDOM) )
 int __wrap_ioctl(int fd, int code, int* ret);
 int __real_ioctl(int fd, int code, int* ret);
 #endif /* defined(__linux__) && !defined(SYS_getrandom) */
@@ -98,7 +98,7 @@ static void test_issue_22(void) {
 
 // ======== Mock OS functions to simulate uncommon behavior ========
 
-#if defined(__linux__) && defined(SYS_getrandom)
+#if defined(__linux__) && defined(SYS_getrandom) && !defined(RANDOMBYTES_USE_DEVRANDOM)
 int __wrap_syscall(int n, char *buf, size_t buflen, int flags) {
 	syscall_called++;
 	if (current_test == test_getrandom_partial) {
@@ -115,7 +115,7 @@ int __wrap_syscall(int n, char *buf, size_t buflen, int flags) {
 }
 #endif /* defined(__linux__) && defined(SYS_getrandom) */
 
-#if defined(__linux__) && !defined(SYS_getrandom)
+#if defined(__linux__) && ( !defined(SYS_getrandom) || defined(RANDOMBYTES_USE_DEVRANDOM) )
 int __wrap_ioctl(int fd, int code, int* ret) {
 	if (current_test == test_issue_17) {
 		errno = ENOTTY;
@@ -137,14 +137,14 @@ int main(void) {
 
 	RUN_TEST(test_functional)
 	RUN_TEST(test_empty)
-#if defined(__linux__) && defined(SYS_getrandom)
+#if defined(__linux__) && defined(SYS_getrandom) && !defined(RANDOMBYTES_USE_DEVRANDOM)
 	RUN_TEST(test_getrandom_partial)
 	RUN_TEST(test_getrandom_interrupted)
 #else
 	SKIP_TEST(test_getrandom_partial)
 	SKIP_TEST(test_getrandom_interrupted)
 #endif /* defined(__linux__) && defined(SYS_getrandom) */
-#if defined(__linux__) && !defined(SYS_getrandom)
+#if defined(__linux__) && ( !defined(SYS_getrandom) || defined(RANDOMBYTES_USE_DEVRANDOM) )
 	RUN_TEST(test_issue_17)
 	RUN_TEST(test_issue_22)
 #else

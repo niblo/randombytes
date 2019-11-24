@@ -79,7 +79,7 @@ static int randombytes_win32_randombytes(void* buf, const size_t n)
 #endif /* defined(_WIN32) */
 
 
-#if defined(__linux__) && defined(SYS_getrandom)
+#if defined(__linux__) && defined(SYS_getrandom) && !defined(RANDOMBYTES_USE_DEVRANDOM)
 static int randombytes_linux_randombytes_getrandom(void *buf, size_t n)
 {
 	/* I have thought about using a separate PRF, seeded by getrandom, but
@@ -104,7 +104,7 @@ static int randombytes_linux_randombytes_getrandom(void *buf, size_t n)
 #endif /* defined(__linux__) && defined(SYS_getrandom) */
 
 
-#if defined(__linux__) && !defined(SYS_getrandom)
+#if defined(__linux__) && ( !defined(SYS_getrandom) || defined(RANDOMBYTES_USE_DEVRANDOM) )
 static int randombytes_linux_read_entropy_ioctl(int device, int *entropy)
 {
 	return ioctl(device, RNDGETENTCNT, entropy);
@@ -285,7 +285,7 @@ int randombytes(void *buf, size_t n)
 # pragma message("Using crypto api from NodeJS")
 	return randombytes_js_randombytes_nodejs(buf, n);
 #elif defined(__linux__)
-# if defined(SYS_getrandom)
+# if defined(SYS_getrandom) && !defined(RANDOMBYTES_USE_DEVRANDOM)
 #  pragma message("Using getrandom system call")
 	/* Use getrandom system call */
 	return randombytes_linux_randombytes_getrandom(buf, n);
